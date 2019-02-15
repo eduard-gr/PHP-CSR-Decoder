@@ -1,0 +1,9 @@
+phpize
+./configure
+make
+sudo make install
+
+Loading the PHP Extension php.ini extension=ggssl.so
+
+Check library php -m | grep ggssl
+
