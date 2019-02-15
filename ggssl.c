@@ -7,15 +7,9 @@
 
 
 #include <openssl/bio.h>
-#include <openssl/x509.h> //dekoder
+#include <openssl/x509.h>
 #include <openssl/x509v3.h>
-
 #include <openssl/pem.h>
-
-//#include <stdio.h>
-//#include <endian.h>
-
-//#include <string.h> //memset
 #include <stdlib.h> //maloc
 
 
@@ -35,7 +29,7 @@ const zend_function_entry functions[] = {
 	{NULL, NULL, NULL}
 };
  
-// the following code creates an entry for the module and registers it with Zend.
+
 zend_module_entry ggssl_module_entry = {
 #if ZEND_MODULE_API_NO >= 20010901
 	STANDARD_MODULE_HEADER,
@@ -119,9 +113,7 @@ int parse_subject(zval* return_value, X509_REQ *req){
 		MAKE_STD_ZVAL(dt);
 		array_init(dt);
 
-		//add_assoc_long(dt, "nid", nid);
 		add_assoc_long(dt, "type", type);
-		//add_assoc_long(dt, "length", num);
 		add_assoc_string(
 			dt,
 			"value",
