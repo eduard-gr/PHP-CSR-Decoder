@@ -1,8 +1,11 @@
+For development you will needed following libraries
+sudo apt install php5.6-dev
 phpize
 ./configure
 make
 sudo make install
 
+For deploy
 Loading the PHP Extension php.ini extension=ggssl.so
 
 Check library php -m | grep ggssl

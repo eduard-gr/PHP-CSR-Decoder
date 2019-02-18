@@ -83,7 +83,6 @@ int parse_extension(zval* return_value, X509_REQ *req){
 		return 0;
 	}
 	parse_san(return_value, extensions);
-	sk_X509_EXTENSION_pop_free(extensions, X509_EXTENSION_free);
 	return 0;
 }
 
@@ -177,8 +176,6 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 		return_value,
 		"bits",
 		EVP_PKEY_bits(pkey));
-
-	EVP_PKEY_free(pkey);
 	return 0;
 }
 
