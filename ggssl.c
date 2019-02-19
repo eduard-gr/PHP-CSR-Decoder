@@ -56,24 +56,29 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 	
 	int ii = sk_GENERAL_NAME_num(sans);
 	if(ii <= 0){
+		//sk_GENERAL_NAME_pop_free(sans, GENERAL_NAME_free);
 		return 0;
 	}
 
-	zval* names;
+	zval *names;
 	MAKE_STD_ZVAL(names);
 	array_init(names);
+
 
 	for (int i = 0; i < ii; i++) {
 		const GENERAL_NAME *current_name = sk_GENERAL_NAME_value(sans, i);
 		if (current_name->type == GEN_DNS) {
 			add_next_index_string(
 				names,
-				ASN1_STRING_data(current_name->d.dNSName),
+				ASN1_STRING_get0_data(current_name->d.dNSName),
 				1);
 		}
 	}
-	
-	add_assoc_zval(return_value, "san", names);
+	//sk_GENERAL_NAME_pop_free(sans, GENERAL_NAME_free);
+	add_assoc_zval(
+		return_value,
+		"san",
+		names);
 }
 
 int parse_extension(zval* return_value, X509_REQ *req){
@@ -82,12 +87,12 @@ int parse_extension(zval* return_value, X509_REQ *req){
 	if(!extensions) {
 		return 0;
 	}
+
 	parse_san(return_value, extensions);
 	return 0;
 }
 
 int parse_subject(zval* return_value, X509_REQ *req){
-
 	X509_NAME *subject = X509_REQ_get_subject_name(req);
 	if (subject == NULL){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to get subject");
@@ -99,16 +104,16 @@ int parse_subject(zval* return_value, X509_REQ *req){
 		ASN1_OBJECT *obj       = X509_NAME_ENTRY_get_object(entry);
 		ASN1_STRING *value     = X509_NAME_ENTRY_get_data(entry);
 
-		int nid = OBJ_obj2nid(obj);
+		int nid  = OBJ_obj2nid(obj);
 		int type = value->type;
-		int num = value->length;
+		int num  = value->length;
 
 		if (num > NAME_ONELINE_MAX) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "X509 r name too long");
 			return 1;
 		}
 
-		zval* dt;
+		zval *dt;
 		MAKE_STD_ZVAL(dt);
 		array_init(dt);
 
@@ -117,7 +122,7 @@ int parse_subject(zval* return_value, X509_REQ *req){
 			dt,
 			"value",
 			ASN1_STRING_get0_data(value),
-			num);
+			1);
 
 		add_assoc_zval(
 			return_value,
@@ -151,7 +156,7 @@ int parse_signature(zval* return_value, X509_REQ *req){
 		return_value,
 		"signature",
 		OBJ_nid2ln(nid),
-		strlen(OBJ_nid2ln(nid)));
+		1);
 
 	return 0;
 }
@@ -170,12 +175,13 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 		return_value,
 		"pubkey",
 		OBJ_nid2ln(EVP_PKEY_id(pkey)),
-		strlen(OBJ_nid2ln(EVP_PKEY_id(pkey))));
+		1);
 
 	add_assoc_long(
 		return_value,
 		"bits",
 		EVP_PKEY_bits(pkey));
+
 	return 0;
 }
 
@@ -205,30 +211,39 @@ PHP_FUNCTION(csr_decoder){
 
 	X509_REQ *req = PEM_read_bio_X509_REQ(bio, NULL, NULL, NULL);
 	if (req == NULL){
+		BIO_free(bio);
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to load X509 request");
 		RETURN_FALSE;
 	}
 
 	if(parse_signature(return_value, req) != 0){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to read signature");
+		BIO_free(bio);
+		X509_REQ_free(req);
 		RETURN_FALSE;
 	}
 
 	if(parse_pubkey(return_value, req) != 0){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to read evp pkey");
+		BIO_free(bio);
+		X509_REQ_free(req);
 		RETURN_FALSE;
 	}
 
 	if(parse_subject(return_value, req) != 0){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to read subject");
+		BIO_free(bio);
+		X509_REQ_free(req);
 		RETURN_FALSE;
 	}
 
 	if(parse_extension(return_value, req) != 0){
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to read subject");
+		BIO_free(bio);
+		X509_REQ_free(req);
 		RETURN_FALSE;
 	}
 
-	X509_REQ_free(req);
 	BIO_free(bio);
+	X509_REQ_free(req);
 }

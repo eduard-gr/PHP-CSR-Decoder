@@ -69,9 +69,44 @@ OwajwTJ0QBEmO4NxT8DdbRkmmJr1rop0f/NUyJXSeE4vAy3+nT2TnmcLbQiyDdce
 QwVMS10o+FQWlU6GOrvNGeRxCTkqubyI4I+XwysJJZYdon3LUyOeHXJZWTsUPaIp
 BkL7GlTH86DJU4eKVguIule9w5lekpWA4UF0fDOfrX2M92cCcwnd/GUuyKE6
 -----END CERTIFICATE REQUEST-----
-
 CSR;
-   
-	var_dump(csr_decoder($san));
+
+$san502 = <<<CSR
+-----BEGIN CERTIFICATE REQUEST-----
+MIICyjCCAbICAQAwgYQxCzAJBgNVBAYTAkNIMQswCQYDVQQIEwJMVTENMAsGA1UE
+BxMEUm9vdDETMBEGA1UECgwKQXp1cml0byBBRzEJMAcGA1UECwwAMRcwFQYDVQQD
+DA5kZXYuZmlyZXRhYi5jaDEgMB4GCSqGSIb3DQEJAQwRbS5ob2hsQGF6dXJpdG8u
+Y2gwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDWCxQmeEWAl/ch5PqN
+XUgUR29sG5QByMpmikH2LiyrNrfAcHPZlzMvUknspR6csw5v+LjGxkNG5cnddXfD
+ibjIxBCwYUpakCAFVXaNDdkCeX7Hu1+QDvzHUYbDFrgWX3BKrEoDI3K2nB4EpMTE
+Am2hKbEf6vRUGMoqnx81WgnKZGYVVOSJ+iKBI7i0GayO6hEQg01e8K5h5AT9QLnq
+wjhiah5DlWWIeg2VZlaC6dbzs7dPxoApAd/0bOU1xD94osl9jo1wm8H0TXtRnNXb
+9khR++bCOva4zoh3kKh1sFBVFXoR0A/hk/etLlVqmNuqxEkZwIW8MioNxDy/jcMo
+Qq87AgMBAAGgADANBgkqhkiG9w0BAQUFAAOCAQEAxZKNFA0L1Szwr+LIsuEBdfoC
+XBJ1BVuhP1Jnsc81Kpx+pwP2u2Y0fJBwnmQ3s4/24hQZRrUk+c+EybSFbBJ6TGuP
+ZqWkHF4BxzzYxSEC6ry+BXmD6z4Qp90aibHuc042CmSDaBLx1JJ+cfHQeetuuqsJ
+qFDHEqj884+msdz4ZzGc8tNuTJxDlUoZldk5RxzKWUI0N5yojCEH9MP/N1jbvASu
+tkhEXF+beHcWav/i1Pq3lO2Uq+g2/RYnL2KlZ6AGGKy645BkyvXJ2wJCd9c08uBX
+sa6wDpko9cMfRg/CC/heNJkIAzV/sonVy3uNcFpzK9SXSNPz4XNuUNlG8k/KMg==
+-----END CERTIFICATE REQUEST-----
+CSR;
+	var_dump(csr_decoder($csr));
+	while(true){
+		$a = csr_decoder($csr);
+		//var_dump($a);
+		//unset($a);
+		
+		$b = csr_decoder($utf8);
+		//var_dump($b);
+		//unset($b);
+		
+		$c = csr_decoder($san);
+		//var_dump($c);
+		//unset($c);
+		
+		$d = csr_decoder($san502);
+		//var_dump($d);
+		//unset($d);
+	}
 
 ?>

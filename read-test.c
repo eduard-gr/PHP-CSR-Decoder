@@ -26,8 +26,9 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 		const GENERAL_NAME *current_name = sk_GENERAL_NAME_value(sans, i);
 		if (current_name->type == GEN_DNS) {
 			printf("san:%s\n",
-				ASN1_STRING_data(current_name->d.dNSName));
+				ASN1_STRING_get0_data(current_name->d.dNSName));
 		}
+		//sk_GENERAL_NAME_pop_free(current_name, GENERAL_NAME_free);
 	}
 	return 0;
 }
@@ -39,6 +40,7 @@ int parse_extension(zval* return_value, X509_REQ *req){
 		return 0;
 	}
 	parse_san(return_value, extensions);
+	sk_X509_EXTENSION_pop_free(extensions, X509_EXTENSION_free);
 	return 0;
 }
 
@@ -125,7 +127,7 @@ void printhex(unsigned char *in, int len){
     printf("\n");
 }
 
-int main(){
+int main(int argc, char *argv[]){
 
 
 	char *csr = "-----BEGIN CERTIFICATE REQUEST-----\n\
@@ -158,12 +160,20 @@ BkL7GlTH86DJU4eKVguIule9w5lekpWA4UF0fDOfrX2M92cCcwnd/GUuyKE6\n\
 	zval* return_value = NULL;
 
 	BIO* bio = NULL;
+
+	bio = BIO_new(BIO_s_file());
+	if(BIO_read_filename(bio, argv[1]) == 0){
+		printf("Unable to read BIO\n");
+		return 1;
+	}
+	/*
 	bio =  BIO_new(BIO_s_mem());
 	int len = strlen(csr);
 	if(BIO_write(bio, csr, len) == 0){
 		printf("Unable to read BIO\n");
 		return 1;
 	}
+	*/
 
 	X509_REQ *req = PEM_read_bio_X509_REQ(bio, NULL, NULL, NULL);
 	if (req == NULL){
