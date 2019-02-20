@@ -1,0 +1,7 @@
+*
+!.gitignore
+!README
+!config.m4
+!ggssl.c
+!read-test.c
+!test.php
