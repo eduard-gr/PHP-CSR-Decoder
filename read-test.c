@@ -5,11 +5,22 @@
 #include <openssl/pem.h>
 #include <stdlib.h> //maloc
 
-//Chto bi ne perepisivat kod s PHP
-
 
 #define NAME_ONELINE_MAX    (1024 * 1024)
-#define zval char
+
+#if OPENSSL_VERSION_NUMBER > 268439647
+#define OPENSSL_11X
+#endif
+
+
+
+void printhex(unsigned char *in, int len){
+	int i = 0;
+	for(; i < len; i ++) {
+		printf(" %2x(%d)", in[i], in[i]);
+	}
+	printf("\n");
+}
 
 int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 	GENERAL_NAMES *sans = X509V3_get_d2i(extensions, NID_subject_alt_name, NULL, NULL);
@@ -22,13 +33,15 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 		return 0;
 	}
 
-	for (int i = 0; i < ii; i++) {
+	int i = 0;
+	for(;i < ii; i++) {
 		const GENERAL_NAME *current_name = sk_GENERAL_NAME_value(sans, i);
 		if (current_name->type == GEN_DNS) {
-			printf("san:%s\n",
-				ASN1_STRING_get0_data(current_name->d.dNSName));
+			unsigned char *out;
+			ASN1_STRING_to_UTF8(&out, current_name->d.dNSName);
+			printf("san:%s\n",out);
 		}
-		//sk_GENERAL_NAME_pop_free(current_name, GENERAL_NAME_free);
+
 	}
 	return 0;
 }
@@ -52,25 +65,62 @@ int parse_subject(zval* return_value, X509_REQ *req){
 		return 1;
 	}
 
-	for(int i=0,ii=X509_NAME_entry_count(subject);i<ii;i++){
+	int i = 0;
+	int ii = X509_NAME_entry_count(subject);
+	for(;i<ii;i++){
 		X509_NAME_ENTRY *entry = X509_NAME_get_entry(subject, i);
 		ASN1_OBJECT *obj       = X509_NAME_ENTRY_get_object(entry);
 		ASN1_STRING *value     = X509_NAME_ENTRY_get_data(entry);
 
 		int nid = OBJ_obj2nid(obj);
 		int type = value->type;
-		int num = value->length;
+		int length = value->length;
 
-		if (num > NAME_ONELINE_MAX) {
+		if (length > NAME_ONELINE_MAX) {
 			printf("X509 r name too long\n");
 			return 1;
 		}
 
-		printf("%s - type:%d value:%s \n",
+		unsigned char *out;
+		ASN1_STRING_to_UTF8(&out, value);
+
+		printf("%s - type:%d length:%d value:%s \n value:%s \n",
 			OBJ_nid2ln(nid),
 			type,
-			ASN1_STRING_get0_data(value));
+			length,
+			//Unfortunately for backward compatibility we need to use DEPRECATED version.
+			//ASN1_STRING_get0_data(value)
+			ASN1_STRING_data(value),
+			out
+		);
 
+/*
+		traverse_string(
+			ASN1_STRING_data(value),
+			length,
+			type,
+			out_utf8,
+		);
+		ASN1_mbstring_copy
+*/
+/*
+		printf("%s - type:%d length:%d value:%s \n",
+			OBJ_nid2ln(nid),
+			type,
+			length,
+			//Unfortunately for backward compatibility we need to use DEPRECATED version.
+			//ASN1_STRING_get0_data(value)
+			asn1_utf8(ASN1_STRING_data(value))
+		);
+		*/
+		
+/*
+		unsigned char *dt = ASN1_STRING_data(value);
+		unsigned char *utf8 = malloc(length);
+		ch2utf8(dt, utf8);
+		printf("%s\n",utf8);
+		printhex(ASN1_STRING_data(value), length);
+*/
 	}
 
 	return 0;
@@ -78,7 +128,7 @@ int parse_subject(zval* return_value, X509_REQ *req){
 
 
 int parse_signature(zval* return_value, X509_REQ *req){
-
+	/*
 	const X509_ALGOR *sig_alg;
 	X509_REQ_get0_signature(req, NULL, &sig_alg);
 	if(sig_alg == NULL){
@@ -97,19 +147,48 @@ int parse_signature(zval* return_value, X509_REQ *req){
 	int nid = OBJ_obj2nid(obj);
 	printf("signature: %s\n",
 		OBJ_nid2ln(nid));
-		
+	*/
+
+#ifdef OPENSSL_11X
+	printf("signature: %s\n",
+		OBJ_nid2ln(X509_REQ_get_signature_nid(req)));
+#else
+//Unfortunately for backward compatibility we need to use OLD version.
+	X509_ALGOR *sig_alg = req->sig_alg;
+	if(sig_alg == NULL){
+		printf("Unable to get X509_ALGOR\n");
+		return 1;
+	}
+
+	if(sig_alg->algorithm == NULL){
+		printf("Unable to get signature\n");
+		return 1;
+	}
+
+	printf("signature: %s\n",
+		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm))
+	);
+#endif
+
 	return 0;
 }
 
 
 
 int parse_pubkey(zval* return_value, X509_REQ *req){
+
+#ifdef OPENSSL_11X
 	EVP_PKEY *pkey = X509_REQ_get0_pubkey(req);
+#else
+	//Unfortunately for backward compatibility we need to use DEPRECATED version.
+	EVP_PKEY *pkey = X509_REQ_get_pubkey(req);
+#endif
+
+	EVP_PKEY *pkey = X509_REQ_get_pubkey(req);
 	if (pkey == NULL) {
 		printf("Unable to read EVP_PKEY\n");
 		return 1;
 	}
-
 
 	printf("pubkey:%s bits:%d\n",
 		OBJ_nid2ln(EVP_PKEY_id(pkey)),
@@ -119,16 +198,20 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 }
 
 
-
-void printhex(unsigned char *in, int len){
-    for (int i = 0; i < len; i ++) {
-        printf(" %2x", in[i]);
-    }
-    printf("\n");
-}
-
 int main(int argc, char *argv[]){
 
+	printf("OPENSSL_VERSION_NUMBER:%ld\n", OPENSSL_VERSION_NUMBER);
+
+	zval* return_value = NULL;
+	BIO* bio = NULL;
+	bio = BIO_new(BIO_s_file());
+	if(BIO_read_filename(bio, argv[1]) == 0){
+		printf("Unable to read BIO\n");
+		return 1;
+	}
+
+	
+	/*
 
 	char *csr = "-----BEGIN CERTIFICATE REQUEST-----\n\
 MIIEeTCCA2ECAQAwfDEkMCIGA1UEAwwbZXhtYWlsLmFsYXNrYW5jcmFiY28uY29t\n\
@@ -157,16 +240,7 @@ QwVMS10o+FQWlU6GOrvNGeRxCTkqubyI4I+XwysJJZYdon3LUyOeHXJZWTsUPaIp\n\
 BkL7GlTH86DJU4eKVguIule9w5lekpWA4UF0fDOfrX2M92cCcwnd/GUuyKE6\n\
 -----END CERTIFICATE REQUEST-----";
 
-	zval* return_value = NULL;
 
-	BIO* bio = NULL;
-
-	bio = BIO_new(BIO_s_file());
-	if(BIO_read_filename(bio, argv[1]) == 0){
-		printf("Unable to read BIO\n");
-		return 1;
-	}
-	/*
 	bio =  BIO_new(BIO_s_mem());
 	int len = strlen(csr);
 	if(BIO_write(bio, csr, len) == 0){
