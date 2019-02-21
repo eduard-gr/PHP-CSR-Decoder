@@ -1,12 +1,24 @@
-For development you will needed following libraries
-sudo apt install php5.6-dev
-phpize
-./configure
-make
-sudo make install
+### For development you will needed following libraries
+* sudo apt install php5.6-dev
+* phpize
+* ./configure
+* make
+* sudo make install
 
-For deploy
+### For deployment
 Loading the PHP Extension php.ini extension=ggssl.so
 
 Check library php -m | grep ggssl
 
+### Продакшен
+Есть некоторые изменения в зависимости от версий OPENSSL, они касаются не только новых функций но и формата самого  CSR.
+Поэтому для продакшена, библиотека компилировалась на: 
+* centos-6.7
+* openssl-1.0.1e-57.el6.x86_64
+* openssl-devel-1.0.1e-57.el6.x86_64
+* php-5.6.39-1.el6.remi.x86_64
+* php-devel-5.6.39-1.el6.remi.x86_64
+
+### Различие версий 
+* До версии и включительно openssl-1.0.1 в CSR не использовалась версия, в новых же версиях можно получить ошибку **8:d=2  hl=2 l=   0 prim: INTEGER           :BAD INTEGER:[]**
+* В коде используються deprecated методы, но добавлены макросы, что бы использовать в зависимости от версий использовать соответствующие функции 
