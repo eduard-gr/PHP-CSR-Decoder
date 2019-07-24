@@ -66,9 +66,9 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 		return 0;
 	}
 
-	zval *names;
-	MAKE_STD_ZVAL(names);
-	array_init(names);
+	zval names;
+	//MAKE_STD_ZVAL(names);
+	array_init(&names);
 
 	int i = 0;
 	for(;i < ii; i++) {
@@ -77,7 +77,7 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 			unsigned char *out;
 			ASN1_STRING_to_UTF8(&out, current_name->d.dNSName);
 			add_next_index_string(
-				names,
+				&names,
 				out);
 		}
 	}
@@ -85,7 +85,7 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 	add_assoc_zval(
 		return_value,
 		"san",
-		names);
+		&names);
 }
 
 int parse_extension(zval* return_value, X509_REQ *req){
@@ -122,23 +122,23 @@ int parse_subject(zval* return_value, X509_REQ *req){
 			return 1;
 		}
 
-		zval *dt;
-		MAKE_STD_ZVAL(dt);
-		array_init(dt);
+		zval dt;
+		//MAKE_STD_ZVAL(dt);
+		array_init(&dt);
 
 		unsigned char *out;
 		ASN1_STRING_to_UTF8(&out, value);
 		
-		add_assoc_long(dt, "type", type);
+		add_assoc_long(&dt, "type", type);
 		add_assoc_string(
-			dt,
+			&dt,
 			"value",
 			out);
 
 		add_assoc_zval(
 			return_value,
 			OBJ_nid2ln(nid),
-			dt);
+			&dt);
 	}
 
 	return 0;
@@ -205,10 +205,11 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 
 ZEND_GET_MODULE(ggssl)
 PHP_FUNCTION(csr_decoder){
-	char *csr;
-	int len;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &csr, &len)) {
+
+	char *csr = NULL;
+	size_t len;
+
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &csr, &len)) {
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to parse parameters");
 		RETURN_FALSE;
 	}
@@ -222,11 +223,13 @@ PHP_FUNCTION(csr_decoder){
 
 	BIO *bio = NULL;
 	bio =  BIO_new(BIO_s_mem());
+
 	if(BIO_write(bio, csr, len) == 0){
 		BIO_free(bio);
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read BIO");
 		RETURN_FALSE;
 	}
+	
 
 	X509_REQ *req = PEM_read_bio_X509_REQ(bio, NULL, NULL, NULL);
 	if (req == NULL){
@@ -255,7 +258,7 @@ PHP_FUNCTION(csr_decoder){
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read subject");
 		RETURN_FALSE;
 	}
-
+	
 	if(parse_extension(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
