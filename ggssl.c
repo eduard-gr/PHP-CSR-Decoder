@@ -78,8 +78,7 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 			ASN1_STRING_to_UTF8(&out, current_name->d.dNSName);
 			add_next_index_string(
 				names,
-				out,
-				1);
+				out);
 		}
 	}
 
@@ -134,8 +133,7 @@ int parse_subject(zval* return_value, X509_REQ *req){
 		add_assoc_string(
 			dt,
 			"value",
-			out,
-			1);
+			out);
 
 		add_assoc_zval(
 			return_value,
@@ -152,8 +150,7 @@ int parse_signature(zval* return_value, X509_REQ *req){
 	add_assoc_string(
 		return_value,
 		"signature",
-		OBJ_nid2ln(X509_REQ_get_signature_nid(req)),
-		1);
+		OBJ_nid2ln(X509_REQ_get_signature_nid(req)));
 #else
 //Unfortunately for backward compatibility we need to use OLD version.
 	X509_ALGOR *sig_alg = req->sig_alg;
@@ -170,8 +167,7 @@ int parse_signature(zval* return_value, X509_REQ *req){
 	add_assoc_string(
 		return_value,
 		"signature",
-		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm)),
-		1);
+		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm)));
 #endif
 
 	return 0;
@@ -196,8 +192,7 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 	add_assoc_string(
 		return_value,
 		"pubkey",
-		OBJ_nid2ln(EVP_PKEY_id(pkey)),
-		1);
+		OBJ_nid2ln(EVP_PKEY_id(pkey)));
 
 	add_assoc_long(
 		return_value,
