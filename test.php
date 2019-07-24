@@ -1,4 +1,7 @@
 <?php
+
+error_log("Test");
+
 $csr = <<<CSR
 -----BEGIN CERTIFICATE REQUEST-----
 MIIC7jCCAdYCAQAwgY0xEjAQBgNVBAgMCVTDuG5zYmVyZzEWMBQGA1UEAwwNY2hh
@@ -188,6 +191,7 @@ QDdHLqAAMAoGCCqGSM49BAMCA0cAMEQCIH9pBdkv5xqShSYyow7UF5oZ47ma6RVy
 YqmEYmFBA8k5AiBqccNIZHl0Ocpe9UQ3Cul6jtPkTePhDW3YzUG6RAxepQ==
 -----END CERTIFICATE REQUEST-----
 CSR;
+	
 
 	var_dump(csr_decoder($abcd));
 	//echo json_last_error();
