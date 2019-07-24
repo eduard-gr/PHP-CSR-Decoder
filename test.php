@@ -177,8 +177,21 @@ sPInFymoKP0L1Q==
 -----END CERTIFICATE REQUEST-----
 CSR;
 
+$abcd = <<<CSR
+-----BEGIN CERTIFICATE REQUEST-----
+MIIBRzCB7wIBADCBjDELMAkGA1UEBhMCQ04xEDAOBgNVBAgMB1NoYWFueGkxDjAM
+BgNVBAcMBVhpJ2FuMRMwEQYDVQQKDApzYXVubmlrZWppMQswCQYDVQQLDAJJVDEZ
+MBcGA1UEAwwQKi52aXNib2R5Zml0LmNvbTEeMBwGCSqGSIb3DQEJARYPYWRtaW5A
+ZHJpeG4uY29tMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+DLdqQNGaUl2J9Ws
+M/V4TxP6mubV3RXoWH+DBzf4+KoiGrsaEHwkiZjxtGbVWk0yxwDQh4fjjz5+s2lp
+QDdHLqAAMAoGCCqGSM49BAMCA0cAMEQCIH9pBdkv5xqShSYyow7UF5oZ47ma6RVy
+YqmEYmFBA8k5AiBqccNIZHl0Ocpe9UQ3Cul6jtPkTePhDW3YzUG6RAxepQ==
+-----END CERTIFICATE REQUEST-----
+CSR;
 
-	echo json_encode(csr_decoder($san));
-	echo json_last_error();
+	var_dump(csr_decoder($abcd));
+	//echo json_last_error();
+
+	//throw new Exception("test");
 
 ?>
