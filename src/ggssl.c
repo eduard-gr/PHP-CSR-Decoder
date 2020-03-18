@@ -66,9 +66,9 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 		return 0;
 	}
 
-	zval names;
-	//MAKE_STD_ZVAL(names);
-	array_init(&names);
+	zval *names;
+	MAKE_STD_ZVAL(names);
+	array_init(names);
 
 	int i = 0;
 	for(;i < ii; i++) {
@@ -77,15 +77,16 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 			unsigned char *out;
 			ASN1_STRING_to_UTF8(&out, current_name->d.dNSName);
 			add_next_index_string(
-				&names,
-				out);
+				names,
+				out,
+				1);
 		}
 	}
 
 	add_assoc_zval(
 		return_value,
 		"san",
-		&names);
+		names);
 }
 
 int parse_extension(zval* return_value, X509_REQ *req){
@@ -122,27 +123,82 @@ int parse_subject(zval* return_value, X509_REQ *req){
 			return 1;
 		}
 
-		zval dt;
-		//MAKE_STD_ZVAL(dt);
-		array_init(&dt);
+		zval *dt;
+		MAKE_STD_ZVAL(dt);
+		array_init(dt);
 
 		unsigned char *out;
 		ASN1_STRING_to_UTF8(&out, value);
 		
-		add_assoc_long(&dt, "type", type);
+		add_assoc_long(dt, "type", type);
 		add_assoc_string(
-			&dt,
+			dt,
 			"value",
-			out);
+			out,
+			1);
 
 		add_assoc_zval(
 			return_value,
 			OBJ_nid2ln(nid),
-			&dt);
+			dt);
 	}
 
 	return 0;
 }
+
+int parse_attributes(zval* return_value, X509_REQ *req){
+	int ii = X509_REQ_get_attr_count(req);
+
+	zval *attributes;
+	MAKE_STD_ZVAL(attributes);
+	array_init(attributes);
+
+	for (int i = 0; i < ii; i++) {
+		X509_ATTRIBUTE *attribute = X509_REQ_get_attr(req, i);
+
+		int nid  = OBJ_obj2nid(X509_ATTRIBUTE_get0_object(attribute));
+
+		if (X509_REQ_extension_nid(nid)){
+			continue;
+		}
+
+		int jj = X509_ATTRIBUTE_count(attribute);
+		
+		zval *values;
+		MAKE_STD_ZVAL(values);
+		array_init(values);
+
+		for(int j=0; j < jj; j++){
+			ASN1_TYPE *at = X509_ATTRIBUTE_get0_type(attribute,j);
+
+			ASN1_TYPE *type = at->type;
+			ASN1_BIT_STRING *bs = at->value.bit_string;
+
+			if ((type != V_ASN1_PRINTABLESTRING) &&
+				(type != V_ASN1_T61STRING) &&
+				(type != V_ASN1_IA5STRING)) {
+				continue;
+			}
+
+			add_next_index_string(
+				values,
+				(char *)bs->data,
+				1);
+		}
+
+		add_assoc_zval(
+			attributes,
+			OBJ_nid2ln(nid),
+			values);
+	}
+
+
+	add_assoc_zval(
+		return_value,
+		"attributes",
+		attributes);
+}
+
 
 
 int parse_signature(zval* return_value, X509_REQ *req){
@@ -150,7 +206,8 @@ int parse_signature(zval* return_value, X509_REQ *req){
 	add_assoc_string(
 		return_value,
 		"signature",
-		OBJ_nid2ln(X509_REQ_get_signature_nid(req)));
+		OBJ_nid2ln(X509_REQ_get_signature_nid(req)),
+		1);
 #else
 //Unfortunately for backward compatibility we need to use OLD version.
 	X509_ALGOR *sig_alg = req->sig_alg;
@@ -167,7 +224,8 @@ int parse_signature(zval* return_value, X509_REQ *req){
 	add_assoc_string(
 		return_value,
 		"signature",
-		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm)));
+		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm)),
+		1);
 #endif
 
 	return 0;
@@ -192,7 +250,8 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 	add_assoc_string(
 		return_value,
 		"pubkey",
-		OBJ_nid2ln(EVP_PKEY_id(pkey)));
+		OBJ_nid2ln(EVP_PKEY_id(pkey)),
+		1);
 
 	add_assoc_long(
 		return_value,
@@ -258,13 +317,23 @@ PHP_FUNCTION(csr_decoder){
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read subject");
 		RETURN_FALSE;
 	}
-	
+
+	if(parse_attributes(return_value, req) != 0){
+		BIO_free(bio);
+		X509_REQ_free(req);
+		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read attributes");
+		RETURN_FALSE;
+	}
+
 	if(parse_extension(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read subject");
 		RETURN_FALSE;
 	}
+
+
+//sk = x->req_info->attributes;
 
 	BIO_free(bio);
 	X509_REQ_free(req);
