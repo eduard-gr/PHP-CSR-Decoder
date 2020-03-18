@@ -153,7 +153,8 @@ int parse_attributes(zval* return_value, X509_REQ *req){
 	MAKE_STD_ZVAL(attributes);
 	array_init(attributes);
 
-	for (int i = 0; i < ii; i++) {
+	int i;
+	for (i = 0; i < ii; i++) {
 		X509_ATTRIBUTE *attribute = X509_REQ_get_attr(req, i);
 
 		int nid  = OBJ_obj2nid(X509_ATTRIBUTE_get0_object(attribute));
@@ -168,7 +169,8 @@ int parse_attributes(zval* return_value, X509_REQ *req){
 		MAKE_STD_ZVAL(values);
 		array_init(values);
 
-		for(int j=0; j < jj; j++){
+		int j;
+		for(j=0; j < jj; j++){
 			ASN1_TYPE *at = X509_ATTRIBUTE_get0_type(attribute,j);
 
 			ASN1_TYPE *type = at->type;
