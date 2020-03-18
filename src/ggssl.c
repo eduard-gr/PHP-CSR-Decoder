@@ -50,7 +50,7 @@ zend_module_entry ggssl_module_entry = {
 //new -- 269488159
 //old -- 268439647
 
-#if OPENSSL_VERSION_NUMBER > 268439647
+#if OPENSSL_VERSION_NUMBER > 268443839
 #define OPENSSL_11X
 #endif
 
@@ -267,6 +267,8 @@ int parse_pubkey(zval* return_value, X509_REQ *req){
 ZEND_GET_MODULE(ggssl)
 PHP_FUNCTION(csr_decoder){
 
+	//printf("OPENSSL_VERSION_NUMBER:%ld",OPENSSL_VERSION_NUMBER);
+
 	char *csr = NULL;
 	size_t len;
 
@@ -335,7 +337,7 @@ PHP_FUNCTION(csr_decoder){
 	}
 
 
-//sk = x->req_info->attributes;
+
 
 	BIO_free(bio);
 	X509_REQ_free(req);
