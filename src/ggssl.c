@@ -8,11 +8,12 @@
 #include <openssl/opensslv.h>
 #include <openssl/bio.h>
 #include <openssl/x509.h>
+//#include <crypto/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
 #include <stdlib.h> //maloc
 
-
+//yum install openssl-devel libffi-devel
 #define NAME_ONELINE_MAX    (1024 * 1024)
 
 
@@ -109,11 +110,12 @@ int parse_subject(zval* return_value, X509_REQ *req){
 
 	int i = 0;
 	int ii = X509_NAME_entry_count(subject);
+
 	for(;i<ii;i++){
 		X509_NAME_ENTRY *entry = X509_NAME_get_entry(subject, i);
 		ASN1_OBJECT *obj       = X509_NAME_ENTRY_get_object(entry);
 		ASN1_STRING *value     = X509_NAME_ENTRY_get_data(entry);
-
+		
 		int nid  = OBJ_obj2nid(obj);
 		int type = value->type;
 		int num  = value->length;
@@ -202,6 +204,31 @@ int parse_attributes(zval* return_value, X509_REQ *req){
 }
 
 
+int parse_version(zval* return_value, X509_REQ *req){
+
+
+	if(req->req_info == NULL){
+		return 1;
+	}
+
+	if(req->req_info->version == NULL){
+		return 1;
+	}
+
+	int length = req->req_info->version->length;
+	if(length == 0){
+		return 1;
+	}
+
+	long version = X509_REQ_get_version(req);
+
+	add_assoc_long(
+		return_value,
+		"version",
+		version);
+
+	return 0;
+}
 
 int parse_signature(zval* return_value, X509_REQ *req){
 #ifdef OPENSSL_11X
@@ -292,12 +319,20 @@ PHP_FUNCTION(csr_decoder){
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read BIO");
 		RETURN_FALSE;
 	}
-	
+
 
 	X509_REQ *req = PEM_read_bio_X509_REQ(bio, NULL, NULL, NULL);
 	if (req == NULL){
 		BIO_free(bio);
 		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to load X509 request");
+		RETURN_FALSE;
+	}
+
+
+	if(parse_version(return_value, req) != 0){
+		BIO_free(bio);
+		X509_REQ_free(req);
+		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "req_info version has zero length");
 		RETURN_FALSE;
 	}
 
