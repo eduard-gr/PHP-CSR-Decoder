@@ -1,5 +1,5 @@
 ### For development you will needed following libraries
-* sudo apt install php5.6-dev
+* sudo yum install -y php-devel libssl-dev libffi-dev
 * phpize
 * ./configure
 * make
