@@ -204,20 +204,23 @@ int parse_attributes(zval* return_value, X509_REQ *req){
 }
 
 
-int parse_version(zval* return_value, X509_REQ *req){
+void parse_version(zval* return_value, X509_REQ *req){
 
 
 	if(req->req_info == NULL){
-		return 1;
+		add_assoc_null(return_value, "version");
+		return;
 	}
 
 	if(req->req_info->version == NULL){
-		return 1;
+		add_assoc_null(return_value, "version");
+		return;
 	}
 
 	int length = req->req_info->version->length;
 	if(length == 0){
-		return 1;
+		add_assoc_null(return_value, "version");
+		return;
 	}
 
 	long version = X509_REQ_get_version(req);
@@ -227,7 +230,7 @@ int parse_version(zval* return_value, X509_REQ *req){
 		"version",
 		version);
 
-	return 0;
+	return;
 }
 
 int parse_signature(zval* return_value, X509_REQ *req){
@@ -329,12 +332,7 @@ PHP_FUNCTION(csr_decoder){
 	}
 
 
-	if(parse_version(return_value, req) != 0){
-		BIO_free(bio);
-		X509_REQ_free(req);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "req_info version has zero length");
-		RETURN_FALSE;
-	}
+	parse_version(return_value, req);
 
 	if(parse_signature(return_value, req) != 0){
 		BIO_free(bio);
