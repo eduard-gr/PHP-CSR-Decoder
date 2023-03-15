@@ -1,7 +1,5 @@
 <?php
 
-error_log("Test");
-
 $csr = <<<CSR
 -----BEGIN CERTIFICATE REQUEST-----
 MIIC7jCCAdYCAQAwgY0xEjAQBgNVBAgMCVTDuG5zYmVyZzEWMBQGA1UEAwwNY2hh
@@ -74,7 +72,7 @@ BkL7GlTH86DJU4eKVguIule9w5lekpWA4UF0fDOfrX2M92cCcwnd/GUuyKE6
 -----END CERTIFICATE REQUEST-----
 CSR;
 
-$version = <<<CSR
+$version_is_null3 = <<<CSR
 -----BEGIN CERTIFICATE REQUEST-----
 MIICwjCCAaoCADB+MQswCQYDVQQGEwJVQTETMBEGA1UEAxMKY2ltYm9yLm5ldDES
 MBAGA1UEBxMJTXVrYWNoZXZvMRcwFQYDVQQKEw5DaW1ib3IgTmV0d29yazEbMBkG
@@ -140,7 +138,7 @@ c2QzZyL28dWePqas32ThZkEKWGBz5fUL2edjepTy3Fig1nqCTBrCSyKUj+nW
 CSR;
 
 
-$old_version = <<<CSR
+$version_is_null2 = <<<CSR
 -----BEGIN CERTIFICATE REQUEST-----
 MIICwjCCAaoCADB+MQswCQYDVQQGEwJVQTETMBEGA1UEAxMKY2ltYm9yLm5ldDES
 MBAGA1UEBxMJTXVrYWNoZXZvMRcwFQYDVQQKEw5DaW1ib3IgTmV0d29yazEbMBkG
@@ -216,7 +214,7 @@ ymtj1Ccw58z955TN/Z9BBXGAIAv/YRmfRwd8pqmx9z+xHY/fCYyXOs7NZ0vdesia
 CSR;
 
 
-$object_has_zero_length = <<<CSR
+$version_is_null = <<<CSR
 -----BEGIN CERTIFICATE REQUEST-----
 MIICtTCCAZ0CADBxMQswCQYDVQQGEwJVQTEVMBMGA1UEAxMMZWtvdnRzMDEyLnJ1
 MREwDwYDVQQHEwhhbGNoZXZzazEPMA0GA1UEChMGdnRzMDEyMRowGAYDVQQIExFs
@@ -236,7 +234,7 @@ qqFeM6Rsc0+bZnuIemgtHSXOuX5Ko0m0Jw==
 -----END CERTIFICATE REQUEST-----
 CSR;
 
-$object_has_zero_length2 = <<<CSR
+$version_is_0 = <<<CSR
 -----BEGIN CERTIFICATE REQUEST-----
 MIICyzCCAbMCAQAwgYUxCzAJBgNVBAYTAkJZMQ4wDAYDVQQIDAVNaW5zazEOMAwG
 A1UEBwwFTWluc2sxFTATBgNVBAoMDEJZQ0VOVEVSIExMQzEQMA4GA1UECwwHc3Vw
@@ -256,15 +254,11 @@ P5ipXgau6b64i4h9yWrWLiFOcwwjIp7Hh6OHzRKDSZ5rw2/ZBtawZC9Vj8qh0p8=
 -----END CERTIFICATE REQUEST-----
 CSR;
 
-
-
-	var_dump(csr_decoder($object_has_zero_length2));
+	//$san, $utf8, $csr
+	//var_dump(csr_decoder($csr));
+	var_dump(csr_decoder($csr));
 	//echo json_last_error();
 
 	//throw new Exception("test");
 
 ?>
-
-
-Attributes:
-            a0:00

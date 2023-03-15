@@ -8,52 +8,51 @@
 #include <openssl/opensslv.h>
 #include <openssl/bio.h>
 #include <openssl/x509.h>
-//#include <crypto/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
 #include <stdlib.h> //maloc
 
-//yum install openssl-devel libffi-devel
 #define NAME_ONELINE_MAX    (1024 * 1024)
 
 
-#define PHP_MY_EXTENSION_VERSION "1.0"
-#define PHP_MY_EXTENSION_EXTNAME "ggssl"
+#define PHP_CSR_DECODER_VERSION "2.0"
+#define PHP_CSR_DECODER_EXTNAME "ggssl"
  
 extern zend_module_entry ggssl_module_entry;
 #define phpext_ggssl_ptr &ggssl_module_entry
 
 PHP_FUNCTION(csr_decoder);
 
-const zend_function_entry functions[] = {
-	PHP_FE(csr_decoder, NULL)
-	{NULL, NULL, NULL}
+
+/* Argument info for each function, used for reflection */
+ZEND_BEGIN_ARG_INFO_EX(arginfo_csr_decoder, 0, 1, 0)
+    ZEND_ARG_TYPE_INFO(0, str, IS_STRING, 1)
+ZEND_END_ARG_INFO()
+
+static const zend_function_entry functions[] = {
+    PHP_FE(csr_decoder, arginfo_csr_decoder)
+    PHP_FE_END
 };
- 
+
 
 zend_module_entry ggssl_module_entry = {
-#if ZEND_MODULE_API_NO >= 20010901
-	STANDARD_MODULE_HEADER,
-#endif
-	PHP_MY_EXTENSION_EXTNAME,
-	functions,
+    STANDARD_MODULE_HEADER,
+    PHP_CSR_DECODER_EXTNAME,
+    functions,
 	NULL, // name of the MINIT function or NULL if not applicable
 	NULL, // name of the MSHUTDOWN function or NULL if not applicable
 	NULL, // name of the RINIT function or NULL if not applicable
 	NULL, // name of the RSHUTDOWN function or NULL if not applicable
 	NULL, // name of the MINFO function or NULL if not applicable
-#if ZEND_MODULE_API_NO >= 20010901
-	PHP_MY_EXTENSION_VERSION,
-#endif
-	STANDARD_MODULE_PROPERTIES
+    PHP_CSR_DECODER_VERSION,
+    STANDARD_MODULE_PROPERTIES
 };
 
-//new -- 269488159
-//old -- 268439647
 
-#if OPENSSL_VERSION_NUMBER > 268443839
-#define OPENSSL_11X
+#if OPENSSL_VERSION_NUMBER > 268439904
+#error "Open ssl version is too new"
 #endif
+
 
 
 int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
@@ -67,9 +66,8 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 		return 0;
 	}
 
-	zval *names;
-	MAKE_STD_ZVAL(names);
-	array_init(names);
+	zval names;
+	array_init(&names);
 
 	int i = 0;
 	for(;i < ii; i++) {
@@ -78,16 +76,15 @@ int parse_san(zval* return_value, STACK_OF(X509_EXTENSION) *extensions){
 			unsigned char *out;
 			ASN1_STRING_to_UTF8(&out, current_name->d.dNSName);
 			add_next_index_string(
-				names,
-				out,
-				1);
+				&names,
+				out);
 		}
 	}
 
 	add_assoc_zval(
 		return_value,
 		"san",
-		names);
+		&names);
 }
 
 int parse_extension(zval* return_value, X509_REQ *req){
@@ -104,7 +101,7 @@ int parse_extension(zval* return_value, X509_REQ *req){
 int parse_subject(zval* return_value, X509_REQ *req){
 	X509_NAME *subject = X509_REQ_get_subject_name(req);
 	if (subject == NULL){
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to get subject");
+		php_error_docref(NULL, E_NOTICE, "Unable to get subject");
 		return 1;
 	}
 
@@ -121,39 +118,42 @@ int parse_subject(zval* return_value, X509_REQ *req){
 		int num  = value->length;
 
 		if (num > NAME_ONELINE_MAX) {
-			php_error_docref(NULL TSRMLS_CC, E_NOTICE, "X509 r name too long");
+			php_error_docref(NULL, E_NOTICE, "X509 r name too long");
 			return 1;
 		}
 
-		zval *dt;
-		MAKE_STD_ZVAL(dt);
-		array_init(dt);
+		zval dt;
+		array_init(&dt);
 
 		unsigned char *out;
 		ASN1_STRING_to_UTF8(&out, value);
 		
-		add_assoc_long(dt, "type", type);
+		add_assoc_long(
+			&dt, 
+			"type", 
+			type);
+
 		add_assoc_string(
-			dt,
+			&dt,
 			"value",
-			out,
-			1);
+			out);
 
 		add_assoc_zval(
 			return_value,
 			OBJ_nid2ln(nid),
-			dt);
+			&dt);
+
 	}
 
 	return 0;
 }
 
 int parse_attributes(zval* return_value, X509_REQ *req){
+
 	int ii = X509_REQ_get_attr_count(req);
 
-	zval *attributes;
-	MAKE_STD_ZVAL(attributes);
-	array_init(attributes);
+	zval attributes;
+	array_init(&attributes);
 
 	int i;
 	for (i = 0; i < ii; i++) {
@@ -167,9 +167,8 @@ int parse_attributes(zval* return_value, X509_REQ *req){
 
 		int jj = X509_ATTRIBUTE_count(attribute);
 		
-		zval *values;
-		MAKE_STD_ZVAL(values);
-		array_init(values);
+		zval values;
+		array_init(&values);
 
 		int j;
 		for(j=0; j < jj; j++){
@@ -185,24 +184,23 @@ int parse_attributes(zval* return_value, X509_REQ *req){
 			}
 
 			add_next_index_string(
-				values,
-				(char *)bs->data,
-				1);
+				&values,
+				(char *)bs->data);
 		}
 
 		add_assoc_zval(
-			attributes,
+			&attributes,
 			OBJ_nid2ln(nid),
-			values);
+			&values);
 	}
 
 
 	add_assoc_zval(
 		return_value,
 		"attributes",
-		attributes);
-}
+		&attributes);
 
+}
 
 void parse_version(zval* return_value, X509_REQ *req){
 
@@ -234,56 +232,38 @@ void parse_version(zval* return_value, X509_REQ *req){
 }
 
 int parse_signature(zval* return_value, X509_REQ *req){
-#ifdef OPENSSL_11X
-	add_assoc_string(
-		return_value,
-		"signature",
-		OBJ_nid2ln(X509_REQ_get_signature_nid(req)),
-		1);
-#else
-//Unfortunately for backward compatibility we need to use OLD version.
 	X509_ALGOR *sig_alg = req->sig_alg;
 	if(sig_alg == NULL){
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to get X509_ALGOR");
+		php_error_docref(NULL, E_NOTICE, "Unable to get X509_ALGOR");
 		return 1;
 	}
 
 	if(sig_alg->algorithm == NULL){
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to get signature");
+		php_error_docref(NULL, E_NOTICE, "Unable to get signature");
 		return 1;
 	}
 
 	add_assoc_string(
 		return_value,
 		"signature",
-		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm)),
-		1);
-#endif
+		OBJ_nid2ln(OBJ_obj2nid(sig_alg->algorithm)));
 
 	return 0;
 }
 
-
-
 int parse_pubkey(zval* return_value, X509_REQ *req){
 
-#ifdef OPENSSL_11X
-	EVP_PKEY *pkey = X509_REQ_get0_pubkey(req);
-#else
-	//Unfortunately for backward compatibility we need to use DEPRECATED version.
 	EVP_PKEY *pkey = X509_REQ_get_pubkey(req);
-#endif
 
 	if (pkey == NULL) {
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read EVP_PKEY");
+		php_error_docref(NULL, E_NOTICE, "Unable to read EVP_PKEY");
 		return 1;
 	}
 
 	add_assoc_string(
 		return_value,
 		"pubkey",
-		OBJ_nid2ln(EVP_PKEY_id(pkey)),
-		1);
+		OBJ_nid2ln(EVP_PKEY_id(pkey)));
 
 	add_assoc_long(
 		return_value,
@@ -302,13 +282,13 @@ PHP_FUNCTION(csr_decoder){
 	char *csr = NULL;
 	size_t len;
 
-	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &csr, &len)) {
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to parse parameters");
+	if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS(), "s", &csr, &len)) {
+		php_error_docref(NULL, E_NOTICE, "Unable to parse parameters");
 		RETURN_FALSE;
 	}
-	
+
 	if(len < 1){
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "CSR is empty");
+		php_error_docref(NULL, E_NOTICE, "CSR is empty");
 		RETURN_FALSE;
 	}
 
@@ -319,59 +299,55 @@ PHP_FUNCTION(csr_decoder){
 
 	if(BIO_write(bio, csr, len) == 0){
 		BIO_free(bio);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read BIO");
+		php_error_docref(NULL, E_NOTICE, "Unable to read BIO");
 		RETURN_FALSE;
 	}
-
 
 	X509_REQ *req = PEM_read_bio_X509_REQ(bio, NULL, NULL, NULL);
 	if (req == NULL){
 		BIO_free(bio);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to load X509 request");
+		php_error_docref(NULL, E_NOTICE, "Unable to load X509 request");
 		RETURN_FALSE;
 	}
-
 
 	parse_version(return_value, req);
 
 	if(parse_signature(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read signature");
+		php_error_docref(NULL, E_NOTICE, "Unable to read signature");
 		RETURN_FALSE;
 	}
 
 	if(parse_pubkey(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read evp pkey");
+		php_error_docref(NULL, E_NOTICE, "Unable to read evp pkey");
 		RETURN_FALSE;
 	}
 
 	if(parse_subject(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read subject");
+		php_error_docref(NULL, E_NOTICE, "Unable to read subject");
 		RETURN_FALSE;
 	}
 
 	if(parse_attributes(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read attributes");
+		php_error_docref(NULL, E_NOTICE, "Unable to read attributes");
 		RETURN_FALSE;
 	}
 
 	if(parse_extension(return_value, req) != 0){
 		BIO_free(bio);
 		X509_REQ_free(req);
-		php_error_docref(NULL TSRMLS_CC, E_NOTICE, "Unable to read subject");
+		php_error_docref(NULL, E_NOTICE, "Unable to read subject");
 		RETURN_FALSE;
 	}
 
-
-
-
 	BIO_free(bio);
 	X509_REQ_free(req);
+
 }
